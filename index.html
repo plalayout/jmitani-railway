@@ -271,9 +271,11 @@ em {
 	function dataUpdate() {
 		var course = document.forms.id_form1.id_textBox1.value;
 		courseArray = course.split("");
-		window.location.hash = course;
 
 		bLoopCourse =  document.forms.id_form1.id_loop.checked;
+
+		window.location.hash = course + "," + (bLoopCourse ? "1" : "0");
+
 		initCourse();
 		draw();
 	}
@@ -287,9 +289,14 @@ em {
 	}
 	
 	function init() {
-		var course = window.location.hash.substring(1) || "SR";
-		courseArray = course.split("");
-		document.forms.id_form1.id_textBox1.value = course;
+		var hash = window.location.hash.substring(1) || "SR,0";
+		var hashArray = hash.split(",");
+
+		courseArray = hashArray[0].split("");
+		document.forms.id_form1.id_textBox1.value = hashArray[0];
+
+		bLoopCourse = hashArray[1] === "1";
+		document.forms.id_form1.id_loop.checked = bLoopCourse;
 
 		var canvas = document.getElementById(canvasName);
 		canvas.addEventListener('mousedown',  onMouseDown,  false);
@@ -410,7 +417,7 @@ em {
 	<input type="button" value="L" onclick="buttonPressed('L');" />
 	<input type="button" value="一文字削除" onclick="deleteLast();" />
 	<input type="button" value="クリア" onclick="clearData();" />
-	<input type="checkbox" value=Loop" onclick="dataUpdate();" id="id_loop"/>ループ
+	<input type="checkbox" value="Loop" onclick="dataUpdate();" id="id_loop"/>ループ
   </form>
   <canvas id="mycanvas" width="800" height="700"></canvas>
 	マウスホイールで拡大縮小、左マウスドラッグで表示位置の移動ができます。
