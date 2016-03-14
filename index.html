@@ -54,7 +54,7 @@ em {
 	const ARC_ANGLE = Math.PI*0.25;
 	const UNIT_LENGTH = 80;
 
-	var courseArray = "SR".split("");
+	var courseArray;
 	const canvasName = 'mycanvas';
 	const lineWidthArray = [12, 10, 6, 4];
 	const colorArray = ["#1970c1", "#51b5ff", "#1970c1", "#51b5ff"];
@@ -269,7 +269,10 @@ em {
 	}
 	
 	function dataUpdate() {
-		courseArray = document.forms.id_form1.id_textBox1.value.split("");
+		var course = document.forms.id_form1.id_textBox1.value;
+		courseArray = course.split("");
+		window.location.hash = course;
+
 		bLoopCourse =  document.forms.id_form1.id_loop.checked;
 		initCourse();
 		draw();
@@ -284,6 +287,10 @@ em {
 	}
 	
 	function init() {
+		var course = window.location.hash.substring(1) || "SR";
+		courseArray = course.split("");
+		document.forms.id_form1.id_textBox1.value = course;
+
 		var canvas = document.getElementById(canvasName);
 		canvas.addEventListener('mousedown',  onMouseDown,  false);
 		canvas.addEventListener('mouseup',	onMouseUp,	false);
@@ -396,7 +403,7 @@ em {
   </div>
   <div id="app">
   <form name="form1" id="id_form1" action="">
-	コース表記  <input name="textBox1" id="id_textBox1" type="text" value="SR" size="40"
+	コース表記  <input name="textBox1" id="id_textBox1" type="text" value="" size="40"
 	onkeydown="dataUpdate();" onkeyup="dataUpdate();" onkeypress="dataUpdate();" />
 	<input type="button" value="S" onclick="buttonPressed('S');" />
 	<input type="button" value="R" onclick="buttonPressed('R');" />
