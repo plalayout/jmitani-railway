@@ -62,6 +62,9 @@ em {
 
 	const INIT_X = 400;
 	const INIT_Y = 200;
+
+	var Max_value_of_Integer = Number.MAX_SAFE_INTEGER;
+	if(isNaN(Max_value_of_Integer)) Max_value_of_Integer = 9007199254740991;
 	
 	// 終点位置
 	var endX;
@@ -184,8 +187,8 @@ em {
 	}
 	
 	function drawCourse(ctx, bSecondDraw) {
-		minX = minY = Number.MAX_SAFE_INTEGER;
-		maxX = maxY = -Number.MAX_SAFE_INTEGER;
+		minX = minY = Max_value_of_Integer;
+		maxX = maxY = -Max_value_of_Integer;
 		
 		for (var i = 0; i < (bLoopCourse ? 8:1); i++) {
 			for(var j = 0; j < courseArray.length; j++) {
