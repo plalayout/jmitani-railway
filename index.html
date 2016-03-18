@@ -53,12 +53,20 @@ em {
 <script type="text/javascript">
 	const ARC_ANGLE = Math.PI*0.25;
 	const UNIT_LENGTH = 80;
+	const RAIL_WIDTH  = 14;
+	const JOINT_LENGTH = 4;
+	const JOINT_WIDTH = 4;
+	const DOUBLE_TRACK_DISTANCE = 22;	
+	const PIER_WIDTH = 29;
+	const PIER_LENGTH =11; 	
 
 	var courseArray;
 	const canvasName = 'mycanvas';
-	const lineWidthArray = [12, 10, 6, 4];
-	const colorArray = ["#1970c1", "#51b5ff", "#1970c1", "#51b5ff"];
+	const lineWidthArray = [RAIL_WIDTH, 12, 6, 4];
+	const colorArray = ["#000000", "#51b5ff", "#1970c1", "#51b5ff"];
+	const EmcolorArray = ["#ff0000", "#ffaacc", "#ff0000", "#ffaacc"];
 	const colorHead = "#51b5ff";
+	const colorpier = "#ffdd00";
 
 	const INIT_X = 400;
 	const INIT_Y = 200;
@@ -89,18 +97,30 @@ em {
 		endAngleDeg = 90;
 	}
 
+	//ジョイント部
 	function drawPoint(ctx, head) {
-		if(head) {
+		var deg_sin = Math.sin(endAngleDeg * Math.PI / 180.0);
+		var deg_cos = Math.cos(endAngleDeg * Math.PI / 180.0);
+
+		if(head){
 			ctx.fillStyle = colorHead;
 			ctx.beginPath();
-			ctx.arc(endX, endY, 2, 0, Math.PI*2, true);
-			ctx.fill();
-		} else {
-			ctx.fillStyle = 'rgb(255, 255, 255)';
-			ctx.beginPath();
-			ctx.arc(endX, endY, 3, 0, Math.PI*2, true);
+			ctx.arc(endX - 1.5 * deg_cos , endY - 1.5 * deg_sin , 2, 0, Math.PI*2, true);
 			ctx.fill();
 		}
+
+		ctx.beginPath();
+		ctx.lineWidth = 1;
+		ctx.strokeStyle = 'rgb(0, 0, 0)';
+
+		ctx.moveTo(endX - RAIL_WIDTH  * 0.5 * deg_sin - 0.5 * deg_cos , endY + RAIL_WIDTH  * 0.5 * deg_cos - 0.5 * deg_sin);
+		ctx.lineTo(endX - JOINT_WIDTH  * 0.5 * deg_sin - 0.5 * deg_cos  , endY + JOINT_WIDTH  * 0.5 * deg_cos -  0.5 * deg_sin);
+		ctx.lineTo(endX - JOINT_WIDTH  * 0.5 * deg_sin - JOINT_LENGTH * deg_cos, endY + JOINT_WIDTH  * 0.5 * deg_cos - JOINT_LENGTH * deg_sin);
+		ctx.lineTo(endX + JOINT_WIDTH  * 0.5 * deg_sin - JOINT_LENGTH * deg_cos, endY - JOINT_WIDTH  * 0.5 * deg_cos - JOINT_LENGTH * deg_sin);
+		ctx.lineTo(endX + JOINT_WIDTH  * 0.5 * deg_sin - 0.5 * deg_cos , endY - JOINT_WIDTH  * 0.5 * deg_cos -  0.5 * deg_sin);
+		ctx.lineTo(endX + RAIL_WIDTH  * 0.5 * deg_sin - 0.5 * deg_cos , endY - RAIL_WIDTH  * 0.5 * deg_cos -  0.5 * deg_sin);
+
+		ctx.stroke();
 		
 		minX = Math.min(minX, endX);
 		maxX = Math.max(maxX, endX);
@@ -115,6 +135,26 @@ em {
 		ctx.stroke();
 	}
 	
+	// 橋脚	   
+	function drawPier(ctx) {
+
+		var deg_sin = Math.sin(endAngleDeg * Math.PI / 180.0);
+		var deg_cos = Math.cos(endAngleDeg * Math.PI / 180.0);
+
+		ctx.beginPath();
+		ctx.lineWidth = PIER_LENGTH;
+		ctx.strokeStyle = colorpier;
+
+		ctx.moveTo(endX - PIER_WIDTH  * 0.5 * deg_sin  , endY + PIER_WIDTH  * 0.5 * deg_cos );
+		ctx.lineTo(endX - RAIL_WIDTH  * 0.5 * deg_sin  , endY + RAIL_WIDTH  * 0.5 * deg_cos );
+		ctx.moveTo(endX + PIER_WIDTH  * 0.5 * deg_sin  , endY - PIER_WIDTH  * 0.5 * deg_cos );
+		ctx.lineTo(endX + RAIL_WIDTH  * 0.5 * deg_sin  , endY - RAIL_WIDTH  * 0.5 * deg_cos );
+
+		ctx.stroke();
+
+
+	}
+
 	// 直線	   
 	function drawStraightRail(ctx) {
 		drawPoint(ctx, true);
@@ -125,7 +165,7 @@ em {
 		
 		for (var i = 0; i < 4; i++) {
 			ctx.lineWidth = lineWidthArray[i];
-			ctx.strokeStyle = colorArray[i];
+			ctx.strokeStyle = (EmRail ? EmcolorArray[i]:colorArray[i]);
 			drawStraightLine(ctx, sx, sy, ex, ey);
 		}
 
@@ -133,6 +173,7 @@ em {
 		endY = ey;
 		
 		drawPoint(ctx, false);
+		EmRail = false;
 	}
 	
 	
@@ -153,7 +194,7 @@ em {
 		
 		for (var i = 0; i < 4; i++) {
 			ctx.lineWidth = lineWidthArray[i];
-			ctx.strokeStyle = colorArray[i];
+			ctx.strokeStyle = (EmRail ? EmcolorArray[i]:colorArray[i]);
 			drawCurve(ctx, cx, cy, UNIT_LENGTH, sa, ea, false); 
 		}
 		
@@ -162,6 +203,7 @@ em {
 		endAngleDeg += 45;
 
 		drawPoint(ctx, false);
+		EmRail = false;
 	}
 	
 	// R曲線	   
@@ -175,7 +217,7 @@ em {
 		
 		for (var i = 0; i < 4; i++) {
 			ctx.lineWidth = lineWidthArray[i];
-			ctx.strokeStyle = colorArray[i];
+			ctx.strokeStyle = (EmRail ? EmcolorArray[i]:colorArray[i]);
 			drawCurve(ctx, cx, cy, UNIT_LENGTH, ea, sa, false); 
 		}
 		
@@ -184,6 +226,7 @@ em {
 		endAngleDeg -= 45;
 
 		drawPoint(ctx, false);
+		EmRail = false;
 	}
 	
 	function drawCourse(ctx, bSecondDraw) {
@@ -191,20 +234,23 @@ em {
 		maxX = maxY = -Max_value_of_Integer;
 		
 		for (var i = 0; i < (bLoopCourse ? 8:1); i++) {
+			EmRail = false;
 			for(var j = 0; j < courseArray.length; j++) {
 				var repeatNum = 1;
 				var nextRailType = "";
 				switch(courseArray[j]) {
-				case "R": case "r": 
-				case "L": case "l": 
-				case "S": case "s": nextRailType = courseArray[j]; break;
-				default: 
+
+				case "2": case "3": case "4": case "5": case "6": 
+				case "7": case "8": case "9":
 					var t = parseInt(courseArray[j], 10);
 					if(t > 0 && t < 10) {
 						repeatNum = t;
 						j++;
 						nextRailType = courseArray[j];
-					}
+					}break;
+
+				default: nextRailType = courseArray[j]; break;
+				 
 				}
 				
 				for(var k = 0; k < repeatNum; k++) {
@@ -212,13 +258,15 @@ em {
 					case "R": case "r":  drawRCurveRail(ctx);   break;
 					case "L": case "l":  drawLCurveRail(ctx);   break;
 					case "S": case "s":  drawStraightRail(ctx); break;
+					case "P": case "p":  drawPier(ctx); break;
+					case "e": EmRail = true; break;
 					}
 				}
 			}
 		}
 		
 		
-		if(bLoopCourse && !bSecondDraw) {
+		if(!bSecondDraw) {
 			setViewForWholeShape(ctx);
 		}
 	}
@@ -228,8 +276,8 @@ em {
 		
 		var cx = (minX + maxX)/2;
 		var cy = (minY + maxY)/2;
-		var w = maxX - minX;
-		var s = 0.6 * canvas.height / w;
+		var w =  Math.max(maxX - minX,maxY - minY);
+		var s =  Math.min(2.0, 0.8 * canvas.height / w);
 		
 		// 適切なスケールと位置で再描画
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -246,7 +294,7 @@ em {
 		drawCourse(ctx, true);
 	}
 		
-	function draw(){
+	function draw(bSecondDraw){
 		var canvas = document.getElementById(canvasName);
 		
 		if (canvas.getContext){
@@ -267,7 +315,7 @@ em {
 			ctx.scale(screenScale, screenScale);
 			ctx.translate(-canvas.width/2, -canvas.height/2);
 			initCourse();
-			drawCourse(ctx, false);
+			drawCourse(ctx, bSecondDraw);
 		}
 	}
 	
@@ -280,7 +328,7 @@ em {
 		window.location.hash = course + "," + (bLoopCourse ? "1" : "0");
 
 		initCourse();
-		draw();
+		draw(false);
 	}
 	
 	function clearData() {
@@ -314,7 +362,7 @@ em {
 			document.attachEvent ("onmousewheel", onMouseWheel);
 		}
 		
-		draw();
+		draw(false);
 	}
 
 	function onMouseMove(e) {
@@ -335,7 +383,7 @@ em {
 			preMouseX = x;
 			preMouseY = y;
 		
-			draw();
+			draw(true);
 		}
 		e.preventDefault();
 	}
@@ -353,7 +401,7 @@ em {
 		var delta = e.deltaY ? -(e.deltaY) : e.wheelDelta ? e.wheelDelta : -(e.detail);
 		screenScale += 0.1 * ((delta < 0) ? -1: 1);
 		if(screenScale <= 0) { screenScale = 0.1; }
-		draw();
+		draw(true);
 		e.preventDefault();
 	}
 	
