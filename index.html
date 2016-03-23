@@ -56,7 +56,8 @@ em {
 	const RAIL_WIDTH  = 14;
 	const JOINT_LENGTH = 4;
 	const JOINT_WIDTH = 4;
-	const DOUBLE_TRACK_DISTANCE = 22;	
+	const DOUBLE_TRACK_DISTANCE_RATIO = 0.278;	
+	const URAIL_RADIUS_RATIO = 0.625;	
 	const PIER_WIDTH = 29;
 	const PIER_LENGTH =11; 	
 
@@ -70,6 +71,7 @@ em {
 
 	const INIT_X = 400;
 	const INIT_Y = 200;
+	const INIT_AngleDeg = 90;
 
 	var Max_value_of_Integer = Number.MAX_SAFE_INTEGER;
 	if(isNaN(Max_value_of_Integer)) Max_value_of_Integer = 9007199254740991;
@@ -81,7 +83,18 @@ em {
 	// 終点の角度
 	var endAngleDeg; // 水平ゼロ度 反時計回り
 	
+	//終点の保存
+	var RailPosition = [];
+	    RailPosition[ 0 ] = new PositionAngle(INIT_X, INIT_Y, INIT_AngleDeg);
+	var iMarkedPoint = 1;
+
 	var bLoopCourse = false; // 閉じたループにするか
+	var DrawAllPier = false; //すべての橋脚を描写するか
+	var AllowAutoScale = true;//自動リサイズを許容するか
+
+	var EmRail = false;//レールを赤表示するか
+	var InvisibleRail = false;//レールを不可視化するか
+
 	var screenScale = 1.0;
 	var screenMoveX = 0;
 	var screenMoveY = 0;
@@ -91,10 +104,32 @@ em {
 	
 	var maxX, maxY, minX, miY;
 	
+	function PositionAngle(tX, tY, tAngle) {
+          this.X = tX;
+          this.Y = tY;
+	  this.Angle = tAngle;
+      	}
+
+	function SavePoint(){
+	    RailPosition[iMarkedPoint++] = new PositionAngle(endX, endY, endAngleDeg);
+	}
+
+	function CallSavePoint(n){
+	    if(n < 0 || n >= iMarkedPoint){n = 0;}
+	    endX = RailPosition[n].X;	
+	    endY = RailPosition[n].Y;	
+	    endAngleDeg = RailPosition[n].Angle;	
+	}
+
+	function ClearRailDecorate() {
+		EmRail = false;
+		InvisibleRail = false;
+	}
 	function initCourse() {
 		endX = INIT_X;
 		endY = INIT_Y;
 		endAngleDeg = 90;
+		iMarkedPoint = 1;
 	}
 
 	//ジョイント部
@@ -156,24 +191,24 @@ em {
 	}
 
 	// 直線	   
-	function drawStraightRail(ctx) {
-		drawPoint(ctx, true);
+	function drawStraightRail(ctx, rail_ratio) {
+		if(!InvisibleRail){drawPoint(ctx, true);}
 		var sx = endX;
 		var sy = endY;
-		var ex = sx + UNIT_LENGTH * Math.cos(endAngleDeg * Math.PI / 180.0);
-		var ey = sy + UNIT_LENGTH * Math.sin(endAngleDeg * Math.PI / 180.0);
+		var ex = sx + rail_ratio * UNIT_LENGTH * Math.cos(endAngleDeg * Math.PI / 180.0);
+		var ey = sy + rail_ratio * UNIT_LENGTH * Math.sin(endAngleDeg * Math.PI / 180.0);
 		
-		for (var i = 0; i < 4; i++) {
-			ctx.lineWidth = lineWidthArray[i];
-			ctx.strokeStyle = (EmRail ? EmcolorArray[i]:colorArray[i]);
-			drawStraightLine(ctx, sx, sy, ex, ey);
+		if(!InvisibleRail){
+			for (var i = 0; i < 4; i++) {
+				ctx.lineWidth = lineWidthArray[i];
+				ctx.strokeStyle = (EmRail ? EmcolorArray[i]:colorArray[i]);
+				drawStraightLine(ctx, sx, sy, ex, ey);
+			}
 		}
-
 		endX = ex;
 		endY = ey;
 		
-		drawPoint(ctx, false);
-		EmRail = false;
+		if(!InvisibleRail){drawPoint(ctx, false);}
 	}
 	
 	
@@ -184,51 +219,89 @@ em {
 	}
 	
 	// L曲線	   
-	function drawLCurveRail(ctx) {
-		drawPoint(ctx, true);
+	function drawLCurveRail(ctx, rail_ratio) {
+		if(!InvisibleRail){drawPoint(ctx, true);}
 
-		var cx = endX - UNIT_LENGTH * Math.sin((endAngleDeg)* Math.PI / 180.0);
-		var cy = endY + UNIT_LENGTH * Math.cos((endAngleDeg)* Math.PI / 180.0);
+		var cx = endX - UNIT_LENGTH * rail_ratio * Math.sin((endAngleDeg)* Math.PI / 180.0);
+		var cy = endY + UNIT_LENGTH * rail_ratio * Math.cos((endAngleDeg)* Math.PI / 180.0);
 		var sa = (endAngleDeg - 90) * Math.PI / 180.0;
 		var ea = (endAngleDeg - 45) * Math.PI / 180.0;
-		
-		for (var i = 0; i < 4; i++) {
-			ctx.lineWidth = lineWidthArray[i];
-			ctx.strokeStyle = (EmRail ? EmcolorArray[i]:colorArray[i]);
-			drawCurve(ctx, cx, cy, UNIT_LENGTH, sa, ea, false); 
+		if(!InvisibleRail){
+			for (var i = 0; i < 4; i++) {
+				ctx.lineWidth = lineWidthArray[i];
+				ctx.strokeStyle = (EmRail ? EmcolorArray[i]:colorArray[i]);
+				drawCurve(ctx, cx, cy, UNIT_LENGTH * rail_ratio, sa, ea, false); 
+			}
 		}
-		
-		endX = cx + UNIT_LENGTH * Math.cos((endAngleDeg - 45) * Math.PI / 180.0);
-		endY = cy + UNIT_LENGTH * Math.sin((endAngleDeg - 45) * Math.PI / 180.0);
+		endX = cx + UNIT_LENGTH * rail_ratio * Math.cos((endAngleDeg - 45) * Math.PI / 180.0);
+		endY = cy + UNIT_LENGTH * rail_ratio * Math.sin((endAngleDeg - 45) * Math.PI / 180.0);
 		endAngleDeg += 45;
 
-		drawPoint(ctx, false);
-		EmRail = false;
+		if(!InvisibleRail){drawPoint(ctx, false);}
 	}
 	
 	// R曲線	   
-	function drawRCurveRail(ctx) {
-		drawPoint(ctx, true);
+	function drawRCurveRail(ctx, rail_ratio) {
+		if(!InvisibleRail){drawPoint(ctx, true);}
 
-		var cx = endX + UNIT_LENGTH * Math.sin((endAngleDeg)* Math.PI / 180.0);
-		var cy = endY - UNIT_LENGTH * Math.cos((endAngleDeg)* Math.PI / 180.0);
+		var cx = endX + UNIT_LENGTH * rail_ratio * Math.sin((endAngleDeg)* Math.PI / 180.0);
+		var cy = endY - UNIT_LENGTH * rail_ratio * Math.cos((endAngleDeg)* Math.PI / 180.0);
 		var sa = (endAngleDeg + 90) * Math.PI / 180.0;
 		var ea = (endAngleDeg + 45) * Math.PI / 180.0;
 		
-		for (var i = 0; i < 4; i++) {
-			ctx.lineWidth = lineWidthArray[i];
-			ctx.strokeStyle = (EmRail ? EmcolorArray[i]:colorArray[i]);
-			drawCurve(ctx, cx, cy, UNIT_LENGTH, ea, sa, false); 
+		if(!InvisibleRail){
+			for (var i = 0; i < 4; i++) {
+				ctx.lineWidth = lineWidthArray[i];
+				ctx.strokeStyle = (EmRail ? EmcolorArray[i]:colorArray[i]);
+				drawCurve(ctx, cx, cy, UNIT_LENGTH * rail_ratio , ea, sa, false); 
+			}
 		}
-		
-		endX = cx + UNIT_LENGTH * Math.cos((endAngleDeg + 45) * Math.PI / 180.0);
-		endY = cy + UNIT_LENGTH * Math.sin((endAngleDeg + 45) * Math.PI / 180.0);
+		endX = cx + UNIT_LENGTH * rail_ratio * Math.cos((endAngleDeg + 45) * Math.PI / 180.0);
+		endY = cy + UNIT_LENGTH * rail_ratio * Math.sin((endAngleDeg + 45) * Math.PI / 180.0);
 		endAngleDeg -= 45;
 
-		drawPoint(ctx, false);
-		EmRail = false;
+		if(!InvisibleRail){drawPoint(ctx, false);}
 	}
 	
+	//スライドコース 右ずれ幅割合を正
+	function drawSlideRail(ctx, rail_ratio, slide_ratio){
+		if(!InvisibleRail){drawPoint(ctx, true);}
+
+		var deg_sin = Math.sin(endAngleDeg * Math.PI / 180.0);
+		var deg_cos = Math.cos(endAngleDeg * Math.PI / 180.0);
+
+
+		var sx = endX;
+		var sy = endY;
+
+		var s1x = sx + 0.25 * rail_ratio * UNIT_LENGTH * deg_cos ;
+		var s1y = sy + 0.25 * rail_ratio * UNIT_LENGTH * deg_sin ;
+
+		var e1x = sx + 0.75 * rail_ratio * UNIT_LENGTH * deg_cos + slide_ratio * UNIT_LENGTH * deg_sin;
+		var e1y = sy + 0.75 * rail_ratio * UNIT_LENGTH * deg_sin - slide_ratio * UNIT_LENGTH * deg_cos;
+
+		var ex = sx + rail_ratio * UNIT_LENGTH * deg_cos + slide_ratio * UNIT_LENGTH * deg_sin;
+		var ey = sy + rail_ratio * UNIT_LENGTH * deg_sin - slide_ratio * UNIT_LENGTH * deg_cos;
+
+		if(rail_ratio != 0 && !InvisibleRail ){
+			for (var i = 0; i < 4; i++) {
+				ctx.lineWidth = lineWidthArray[i];
+				ctx.strokeStyle = (EmRail ? EmcolorArray[i]:colorArray[i]);
+
+				ctx.beginPath();
+				ctx.moveTo(sx, sy);
+				ctx.lineTo(s1x, s1y);
+				ctx.lineTo(e1x, e1y);
+				ctx.lineTo(ex, ey);
+				ctx.stroke();
+			}
+		}
+
+		endX = ex;
+		endY = ey;
+		
+		if(!InvisibleRail){drawPoint(ctx, false);}
+	}
 	function drawCourse(ctx, bSecondDraw) {
 		minX = minY = Max_value_of_Integer;
 		maxX = maxY = -Max_value_of_Integer;
@@ -254,19 +327,44 @@ em {
 				}
 				
 				for(var k = 0; k < repeatNum; k++) {
+
 					switch(nextRailType) {
-					case "R": case "r":  drawRCurveRail(ctx);   break;
-					case "L": case "l":  drawLCurveRail(ctx);   break;
-					case "S": case "s":  drawStraightRail(ctx); break;
-					case "P": case "p":  drawPier(ctx); break;
-					case "e": EmRail = true; break;
+					case "e": EmRail        = true;j++; nextRailType = courseArray[j]; break;//レール強調（赤表示）
+					case "f": InvisibleRail = true;j++; nextRailType = courseArray[j]; break;//レール不可視化
 					}
+
+					switch(nextRailType) {
+					case "R": case "r":  drawRCurveRail(ctx, 1.0);   break;//右カーブ
+					case "L": case "l":  drawLCurveRail(ctx, 1.0);   break;//左カーブ
+					case "S": case "s":  drawStraightRail(ctx, 1.0  ); break;//直線
+					case "H": case "h":  drawStraightRail(ctx, 0.5  ); break;//１／２
+					case "Q": case "q":  drawStraightRail(ctx, 0.25 ); break;//１／４
+					case "J": case "j":  drawStraightRail(ctx, 0.167); break;//１／６
+					case "A": case "a":  drawSlideRail(ctx, 1.0,  DOUBLE_TRACK_DISTANCE_RATIO); break;//複線幅右分岐
+					case "C": case "c":  drawSlideRail(ctx, 1.0, -DOUBLE_TRACK_DISTANCE_RATIO); break;//複線幅左分岐
+					case "I": case "i":  drawSlideRail(ctx, 0,  DOUBLE_TRACK_DISTANCE_RATIO); break;//複線幅右ずれ
+					case "K": case "k":  drawSlideRail(ctx, 0, -DOUBLE_TRACK_DISTANCE_RATIO); break;//複線幅左ずれ
+					case "G": case "g":  drawRCurveRail(ctx, 1.0 + DOUBLE_TRACK_DISTANCE_RATIO);   break;//外曲線右カーブ
+					case "N": case "n":  drawLCurveRail(ctx, 1.0 + DOUBLE_TRACK_DISTANCE_RATIO);   break;//外曲線左カーブ
+					case "X": case "x":  drawSlideRail(ctx, 1.0,  0.25); break;//Y字右分岐
+					case "Z": case "z":  drawSlideRail(ctx, 1.0, -0.25); break;//Y字左分岐
+					case "U": case "u":  drawUCurveRail(ctx, 1.0);   break;//右カーブ
+
+					case "T": case "t":  endAngleDeg += 90; break;
+					case "M": case "m":  SavePoint(); break;//レール位置メモリー
+					case "B": case "b":  CallSavePoint(iMarkedPoint-1); break;//レール位置呼び出し
+					case "O": case "o":  CallSavePoint(iBasePoint); break;//最初のレールの位置呼び出し
+					case "P": case "p":  drawPier(ctx); break;//橋脚
+					}
+					if(DrawAllPier && !InvisibleRail){drawPier(ctx);}
 				}
+				ClearRailDecorate();
 			}
+		SavePoint();
+		iBasePoint = iMarkedPoint -1 ;	
 		}
 		
-		
-		if(!bSecondDraw) {
+		if(!bSecondDraw && (AllowAutoScale || bLoopCourse)) {
 			setViewForWholeShape(ctx);
 		}
 	}
@@ -324,8 +422,10 @@ em {
 		courseArray = course.split("");
 
 		bLoopCourse =  document.forms.id_form1.id_loop.checked;
+		DrawAllPier =  document.forms.id_form1.id_pier.checked;
+		AllowAutoScale =  document.forms.id_form1.id_auto.checked;
 
-		window.location.hash = course + "," + (bLoopCourse ? "1" : "0");
+		window.location.hash = course + "," + (bLoopCourse ? "1" : "0") + "," + (DrawAllPier ? "1" : "0");
 
 		initCourse();
 		draw(false);
@@ -348,6 +448,9 @@ em {
 
 		bLoopCourse = hashArray[1] === "1";
 		document.forms.id_form1.id_loop.checked = bLoopCourse;
+
+		DrawAllPier = hashArray[2] === "1";
+		document.forms.id_form1.id_pier.checked = DrawAllPier;
 
 		var canvas = document.getElementById(canvasName);
 		canvas.addEventListener('mousedown',  onMouseDown,  false);
@@ -418,6 +521,13 @@ em {
 		}
 		dataUpdate();
 	}
+
+	function SaveLayoutImg() {
+		var data = document.getElementById(canvasName).toDataURL('image/png');
+		document.getElementById("data").src = data;
+	}
+
+
 	
 	</script>
 	<style type="text/css">
@@ -439,9 +549,14 @@ em {
   <h2>説明</h2>
   <div class="explain">
   「コース表記」の欄に入力された記号列に従ってレールを配置します。<br>
-  使用できる記号は<em>S,L,R</em>の3種類で、それぞれ「S=直線」「L=左向きの曲線」「R=右向きの曲線」です。 記述した記号の順番でレールが連結されます。<br>
+  直線曲線の入力には<em>S,L,R</em>が使用できます。それぞれ「S=直線」「L=左向きの曲線」「R=右向きの曲線」です。 記述した記号の順番でレールが連結されます。<br>
   ※ キーボードから直接入力できます。同じ記号が続く場合、記号の前に数字1文字を付けた簡略表記ができます。<br>
-  （例：RRRRLL→4R2L）
+  （例：RRRRLL→4R2L）<br>
+　その他、次のとおりレールの入力が可能です。1/2直線：H、1/4直線：Q、ジョイントレール(1/6)：J、外側曲線右向き：G、外側曲線左向き：N、複線幅右分岐:A、複線幅左分岐:C、複線幅右置き:I(i)、複線幅左置き：K、Y字右分岐:X、Y字左分岐：Z<br>
+　必要に応じて、レールの修飾が可能です。文字直後のレールが修飾されます。赤表示：e、非表示：F<br>
+　ジョイントに橋脚を置いた状況は、Pで再現されます。<br>
+　ポイントの位置を記憶できます。記録：M、一つ前の位置の呼び出し:B、最初の位置の呼び出し:O（オー）。<br>
+　「T」により、レールを置く方向が90度回転します。
   </div>
   
   
@@ -469,10 +584,21 @@ em {
 	<input type="button" value="一文字削除" onclick="deleteLast();" />
 	<input type="button" value="クリア" onclick="clearData();" />
 	<input type="checkbox" value="Loop" onclick="dataUpdate();" id="id_loop"/>ループ
-  </form>
+   	<input type="checkbox" value="auto" onclick="dataUpdate();" id="id_auto" checked/>Auto
+ 	<input type="checkbox" value="pier" onclick="dataUpdate();" id="id_pier"/>橋脚
+</form>
   <canvas id="mycanvas" width="800" height="700"></canvas>
 	マウスホイールで拡大縮小、左マウスドラッグで表示位置の移動ができます。
+  <form name="form2" id="id_form2" action="">
+	canvasの描画を画像に変換<input type="button" value="変換" onclick="SaveLayoutImg();" />
+  </form>
+        <p>
+            <img id="data" src="" width="160" height="140">
+        </p>
+   <a href="https://twitter.com/share" class="twitter-share-button" data-via="plalayout" data-size="large" data-hashtags="jmitani_rail_sim">Tweet</a> <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
    <div style="text-align: right;"> Ver.1.0.1 2016.3.12 Jun Mitani <a href="http://mitani.cs.tsukuba.ac.jp/ja/" target="_blank">(Web)</a> <a href="https://twitter.com/jmitani" target="＿blank">(Twitter)</a></div>
+   <div style="text-align: right;"> Ver.1.0.2 2016.3.16 aranged by gam0022 <a href="https://github.com/gam0022/jmitani-railway" target="_blank">(Web)</a> </div>
+   <div style="text-align: right;"> Ver.1.0.3 2016.3.22 aranged by plalayout <a href="https://github.com/plalayout/jmitani-railway" target="_blank">(Web)</a> <a href="https://twitter.com/plalayout" target="＿blank">(Twitter)</a></div>
   </div>
   </div>
   
