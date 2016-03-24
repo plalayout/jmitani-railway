@@ -112,7 +112,8 @@ em {
       	}
 
 	function SavePoint(){
-	    RailPosition[iMarkedPoint++] = new PositionAngle(endX, endY, endAngleDeg);
+	    RailPosition[iMarkedPoint] = new PositionAngle(endX, endY, endAngleDeg);
+	    iMarkedPoint++;
 	}
 
 	function CallSavePoint(n){
@@ -129,7 +130,8 @@ em {
 	function initCourse() {
 		endX = INIT_X;
 		endY = INIT_Y;
-		endAngleDeg = 90;
+		endAngleDeg = INIT_AngleDeg;
+		iBasePoint= 0;
 		iMarkedPoint = 1;
 	}
 
@@ -486,8 +488,8 @@ em {
 					case "J": case "j":  drawStraightRail(ctx, 0.167); break;//１／６
 					case "A": case "a":  drawSlideRail(ctx, 1.0,  DOUBLE_TRACK_DISTANCE_RATIO); break;//複線幅右分岐
 					case "C": case "c":  drawSlideRail(ctx, 1.0, -DOUBLE_TRACK_DISTANCE_RATIO); break;//複線幅左分岐
-					case "I": case "i":  drawSlideRail(ctx, 0,  DOUBLE_TRACK_DISTANCE_RATIO); break;//複線幅右ずれ
-					case "K": case "k":  drawSlideRail(ctx, 0, -DOUBLE_TRACK_DISTANCE_RATIO); break;//複線幅左ずれ
+					case "I": case "i":  InvisibleRail = true;drawSlideRail(ctx, 0,  DOUBLE_TRACK_DISTANCE_RATIO); break;//複線幅右ずれ
+					case "K": case "k":  InvisibleRail = true;drawSlideRail(ctx, 0, -DOUBLE_TRACK_DISTANCE_RATIO); break;//複線幅左ずれ
 					case "G": case "g":  drawRCurveRail(ctx, 1.0 + DOUBLE_TRACK_DISTANCE_RATIO);   break;//外曲線右カーブ
 					case "N": case "n":  drawLCurveRail(ctx, 1.0 + DOUBLE_TRACK_DISTANCE_RATIO);   break;//外曲線左カーブ
 					case "X": case "x":  drawSlideRail(ctx, 1.0,  0.25); break;//Y字右分岐
@@ -497,7 +499,8 @@ em {
 
 					case "T": case "t":  endAngleDeg += 90; break;
 					case "M": case "m":  SavePoint(); break;//レール位置メモリー
-					case "B": case "b":  CallSavePoint(iMarkedPoint-1); break;//レール位置呼び出し
+					case "b": 	     CallSavePoint(iMarkedPoint-1); break;//レール位置呼び出し
+					case "B":  	     --iMarkedPoint;CallSavePoint(iMarkedPoint-1); break;//レール位置呼び出し
 					case "O": case "o":  CallSavePoint(iBasePoint); break;//最初のレールの位置呼び出し
 					case "P": case "p":  drawPier(ctx); break;//橋脚
 					}
@@ -506,7 +509,7 @@ em {
 				ClearRailDecorate();
 			}
 		SavePoint();
-		iBasePoint = iMarkedPoint -1 ;	
+		iBasePoint = iMarkedPoint-1;	
 		}
 		
 		if(!bSecondDraw && (AllowAutoScale || bLoopCourse)) {
@@ -571,7 +574,6 @@ em {
 		AllowAutoScale =  document.forms.id_form1.id_auto.checked;
 
 		window.location.hash = course + "," + (bLoopCourse ? "1" : "0") + "," + (DrawAllPier ? "1" : "0");
-
 		initCourse();
 		draw(false);
 		SaveLayoutImg();
